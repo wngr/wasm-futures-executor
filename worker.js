@@ -1,4 +1,4 @@
-import init, { worker_entry_point } from './wasm_thread_pool.js';
+import init, { worker_entry_point } from './wasm_futures_executor.js';
 
 // Wait for the main thread to send us the shared module/memory. Once we've got
 // it, initialize it all with the `wasm_bindgen` global we imported via

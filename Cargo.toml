@@ -1,5 +1,5 @@
 [package]
-name = "wasm-thread-pool"
+name = "wasm-futures-executor"
 version = "0.1.0"
 edition = "2018"
 authors = ["Oliver Wangler <oliver@wngr.de>"]
@@ -20,7 +20,7 @@ wasm-bindgen-futures = "0.4.26"
 
 [dependencies.parking_lot]
 version = "0.11.1"
-# nightly: use a thread paker with atomics support
+# nightly: use a thread parker with atomics support
 features = ["wasm-bindgen", "stdweb", "nightly"]
 
 [dependencies.web-sys]

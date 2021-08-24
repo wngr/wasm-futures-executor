@@ -2,9 +2,10 @@
 
 
 RUSTFLAGS='-C target-feature=+atomics,+bulk-memory,+mutable-globals' \
-  cargo +nightly build --target wasm32-unknown-unknown --release -Z build-std=std,panic_abort
+  cargo build --target wasm32-unknown-unknown --release -Z build-std=std,panic_abort
 
 wasm-bindgen \
-  ./target/wasm32-unknown-unknown/release/wasm_thread_pool.wasm \
+  ./target/wasm32-unknown-unknown/release/wasm_futures_executor.wasm \
   --out-dir . \
-  --target web
+  --target web \
+  --weak-refs

@@ -6,7 +6,7 @@ use instant::Instant;
 use js_sys::Promise;
 use log::*;
 use wasm_bindgen::{prelude::*, JsCast};
-use web_sys::{DedicatedWorkerGlobalScope, Navigator};
+use web_sys::DedicatedWorkerGlobalScope;
 
 use self::pool::WorkerPool;
 use self::thread_pool::ThreadPool;
