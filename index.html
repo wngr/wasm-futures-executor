@@ -4,15 +4,15 @@
   </head>
   <body>
     <script type="module">
-      import init, { start, WorkerPool } from './wasm_thread_pool.js';
+      import init, { start, start_async, WorkerPool } from './wasm_thread_pool.js';
 
       async function run() {
         await init();
 
-        const pool = new WorkerPool(navigator.hardwareConcurrency);
-        console.log("created pool");
+        //const pool = new WorkerPool(navigator.hardwareConcurrency);
+        //console.log("created pool");
 
-        const res = await start(pool);
+        const res = await start_async();
         console.log("result", res);
       }
 
