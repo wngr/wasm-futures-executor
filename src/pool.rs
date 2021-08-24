@@ -52,8 +52,8 @@ impl WorkerPool {
                 }) as Box<dyn FnMut(Event)>),
             }),
         };
-        for _ in 0..initial {
-            let worker = pool.spawn()?;
+        for i in 0..initial {
+            let worker = pool.spawn(i)?;
             pool.state.push(worker);
         }
 
@@ -69,8 +69,8 @@ impl WorkerPool {
     ///
     /// Returns any error that may happen while a JS web worker is created and a
     /// message is sent to it.
-    fn spawn(&self) -> Result<Worker, JsValue> {
-        info!("spawning new worker");
+    fn spawn(&self, idx: usize) -> Result<Worker, JsValue> {
+        info!("spawning new worker: {}", idx);
         // TODO: what do do about `./worker.js`:
         //
         // * the path is only known by the bundler. How can we, as a
@@ -87,6 +87,7 @@ impl WorkerPool {
         let array = js_sys::Array::new();
         array.push(&wasm_bindgen::module());
         array.push(&wasm_bindgen::memory());
+        array.push(&(idx as i32).into());
         worker.post_message(&array)?;
 
         Ok(worker)
@@ -103,9 +104,10 @@ impl WorkerPool {
     /// Returns any error that may happen while a JS web worker is created and a
     /// message is sent to it.
     fn worker(&self) -> Result<Worker, JsValue> {
-        match self.state.workers.borrow_mut().pop() {
+        let mut x = self.state.workers.borrow_mut();
+        match x.pop() {
             Some(worker) => Ok(worker),
-            None => self.spawn(),
+            None => self.spawn(x.len()),
         }
     }
 

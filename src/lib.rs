@@ -1,12 +1,19 @@
-use futures::StreamExt;
 use futures::channel::mpsc;
+use futures::StreamExt;
 use js_sys::Promise;
+use log::*;
 use wasm_bindgen::prelude::*;
 
 use self::pool::WorkerPool;
 
 mod pool;
 
+#[wasm_bindgen(start)]
+pub fn main() {
+    let _ = console_log::init_with_level(log::Level::Info);
+    ::console_error_panic_hook::set_once();
+    info!("Set up logging");
+}
 #[wasm_bindgen]
 pub struct Export {}
 
@@ -17,7 +24,8 @@ pub fn start(pool: WorkerPool) -> Promise {
         let mut tx_c = tx.clone();
         pool.run(move || {
             tx_c.start_send(i * i).unwrap();
-        }).unwrap();
+        })
+        .unwrap();
     }
     wasm_bindgen_futures::future_to_promise(async move {
         let mut i = 0;
@@ -27,4 +35,3 @@ pub fn start(pool: WorkerPool) -> Promise {
         Ok(i.into())
     })
 }
-

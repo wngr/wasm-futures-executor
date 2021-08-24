@@ -7,6 +7,8 @@ import init, { child_entry_point } from './wasm_thread_pool.js';
 // After our first message all subsequent messages are an entry point to run,
 // so we just do that.
 self.onmessage = event => {
+  let idx = event.data[2];
+  console.log("Hi from", idx);
   let initialised = init(...event.data).catch(err => {
     // Propagate to main `onerror`:
     setTimeout(() => {
