@@ -3,7 +3,20 @@
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
   </head>
   <body>
-    <script src='wasm_thread_pool.js'></script>
-    <script src='index.js'></script>
+    <script type="module">
+      import init, { start, WorkerPool } from './wasm_thread_pool.js';
+
+      async function run() {
+        await init();
+
+        const pool = new WorkerPool(navigator.hardwareConcurrency);
+        console.log("created pool");
+
+        const res = await start(pool);
+        console.log("result", res);
+      }
+
+      run();
+    </script>
   </body>
 <html>

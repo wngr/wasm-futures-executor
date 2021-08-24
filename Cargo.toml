@@ -14,4 +14,10 @@ js-sys = "0.3.53"
 log = "0.4.14"
 wasm-bindgen = "0.2.76"
 wasm-bindgen-futures = "0.4.26"
-web-sys = { version = "0.3.53", features = ["DedicatedWorkerGlobalScope", "MessageEvent", "Worker", "ErrorEvent"] }
+web-sys = { version = "0.3.53", features = ["DedicatedWorkerGlobalScope", "MessageEvent", "Worker", "WorkerOptions", "WorkerType", "ErrorEvent"] }
+
+[patch.crates-io]
+js-sys = { path = "../wasm-bindgen/crates/js-sys" }
+wasm-bindgen = { path = "../wasm-bindgen" }
+wasm-bindgen-futures = { path = "../wasm-bindgen/crates/futures" }
+web-sys = { path = "../wasm-bindgen/crates/web-sys" }

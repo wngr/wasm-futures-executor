@@ -7,4 +7,4 @@ RUSTFLAGS='-C target-feature=+atomics,+bulk-memory,+mutable-globals' \
 wasm-bindgen \
   ./target/wasm32-unknown-unknown/release/wasm_thread_pool.wasm \
   --out-dir . \
-  --target no-modules
+  --target web
