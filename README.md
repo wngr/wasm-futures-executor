@@ -5,7 +5,7 @@
 [![Documentation](https://docs.rs/wasm-futures-executor/badge.svg)](https://docs.rs/wasm-futures-executor)
 
 This crate provides an executor for asynchronous task with the same
-API as [`futures-executor::ThreadPool`] targeting the web browser
+API as [`futures_executor::ThreadPool`] targeting the web browser
 environment. Instead of using spawning threads via `std::thread`, web
 workers are created. This crate tries hard to make this process as
 seamless and painless as possible.
