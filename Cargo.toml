@@ -25,10 +25,10 @@ features = ["wasm-bindgen", "stdweb", "nightly"]
 
 [dependencies.web-sys]
 version = "0.3.53"
-features = ["DedicatedWorkerGlobalScope", "MessageEvent", "Navigator", "Worker", "WorkerOptions", "WorkerType", "ErrorEvent"]
+features = ["Blob", "BlobPropertyBag", "DedicatedWorkerGlobalScope", "MessageEvent", "Navigator", "Worker", "WorkerOptions", "WorkerType", "ErrorEvent", "Url"]
 
 [patch.crates-io]
-js-sys = { path = "../wasm-bindgen/crates/js-sys" }
-wasm-bindgen = { path = "../wasm-bindgen" }
-wasm-bindgen-futures = { path = "../wasm-bindgen/crates/futures" }
-web-sys = { path = "../wasm-bindgen/crates/web-sys" }
+js-sys = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
+wasm-bindgen = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
+wasm-bindgen-futures = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
+web-sys = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
