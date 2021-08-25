@@ -4,7 +4,7 @@
   </head>
   <body>
     <script type="module">
-      import init, { start, start_async, WorkerPool } from './wasm_futures_executor.js';
+      import init, { start_async, WorkerPool } from './wasm_futures_executor.js';
 
       async function run() {
         await init();
@@ -12,8 +12,10 @@
         //const pool = new WorkerPool(navigator.hardwareConcurrency);
         //console.log("created pool");
 
-        const res = await start_async();
-        console.log("result", res);
+        //while (true) {
+          const res = await start_async();
+          console.log("result", res);
+       // }
       }
 
       run();
