@@ -13,6 +13,19 @@ use crate::unpark_mutex::UnparkMutex;
 
 trait AssertSendSync: Send + Sync {}
 impl AssertSendSync for ThreadPool {}
+
+/// A general-purpose thread pool for scheduling tasks that poll futures to
+/// completion.
+///
+/// The thread pool multiplexes any number of tasks onto a fixed number of
+/// worker threads.
+///
+/// This type is a clonable handle to the threadpool itself.
+/// Cloning it will only create a new reference, not a new threadpool.
+///
+/// The API follows [`futures_executor::ThreadPool`].
+///
+/// [`futures_executor::ThreadPool`]: https://docs.rs/futures-executor/0.3.16/futures_executor/struct.ThreadPool.html
 pub struct ThreadPool {
     state: Arc<PoolState>,
 }
@@ -42,6 +55,9 @@ impl Spawn for ThreadPool {
         Ok(())
     }
 }
+
+/// Generates a DOMString containing an URL representing the code each worker is bootstrapped from.
+/// This string can be used to as an argument to the [`Worker`] constructor.
 fn worker_script() -> String {
     let path = js_sys::eval(r#"
 // Taken from https://github.com/chemicstry/wasm_thread/blob/3c712fe91c8bc31cbdc8eeba7d151c4505d358e2/src/script_path.js
@@ -102,6 +118,7 @@ self.onmessage = event => {{
 }
 
 impl ThreadPool {
+    /// Creates a new [`ThreadPool`] with the provided count of web workers.
     pub fn new(size: usize) -> Result<ThreadPool, JsValue> {
         let (tx, rx) = mpsc::channel();
         let pool = ThreadPool {
@@ -134,9 +151,11 @@ impl ThreadPool {
         }
         Ok(pool)
     }
+
+    /// Creates a new [`ThreadPool`] with `Navigator.hardwareConcurrency` web workers.
     pub fn max_threads() -> Result<Self, JsValue> {
         let pool_size = web_sys::window()
-            .expect("Main browser context")
+            .ok_or("Global window object not accessible")?
             .navigator()
             .hardware_concurrency() as usize;
         Self::new(pool_size)
@@ -190,13 +209,13 @@ pub struct PoolState {
     cnt: AtomicUsize,
     size: usize,
 }
+
 impl PoolState {
     fn send(&self, msg: Message) {
         self.tx.lock().send(msg).unwrap();
     }
 
     fn work(&self) {
-        //        let _scope = enter().unwrap();
         loop {
             let msg = self.rx.lock().recv().unwrap();
             match msg {
@@ -206,6 +225,7 @@ impl PoolState {
         }
     }
 }
+
 /// A task responsible for polling a future to completion.
 struct Task {
     future: FutureObj<'static, ()>,
@@ -268,7 +288,8 @@ struct WakeHandle {
     exec: ThreadPool,
 }
 
-/// Entry point invoked by `worker.js`
+/// Entry point invoked by the web worker. The passed pointer will be unconditionally interpreted
+/// as an `Arc<PoolState`.
 #[wasm_bindgen]
 pub fn worker_entry_point(state_ptr: u32) {
     let state = unsafe { Arc::<PoolState>::from_raw(state_ptr as *const PoolState) };

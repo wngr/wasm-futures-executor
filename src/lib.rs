@@ -1,10 +1,17 @@
-///! TODO
+///! This crate provides an executor for asynchronous task with the same
+///! API as [`futures-executor::ThreadPool`] targeting the web browser
+///! environment. Instead of using spawning threads via `std::thread`, web
+///! workers are created. This crate tries hard to make this process as
+///! seamless and painless as possible.
+///! 
+///! For further information and usage examples please check the [repository].
+///! 
+///! [`futures_executor::ThreadPool`]: https://docs.rs/futures-executor/0.3.16/futures_executor/struct.ThreadPool.html
+///! [repository]: https://github.com/wngr/wasm-futures-executor
 mod pool;
 mod unpark_mutex;
 
 pub use self::pool::ThreadPool;
-// Note: `atomics` is whitelisted in `target_feature` detection, but `bulk-memory` isn't,
-// so we can check only presence of the former. This should be enough to catch most common
-// mistake (forgetting to pass `RUSTFLAGS` altogether).
-#[cfg(not(target_feature = "atomics"))]
-compile_error!("Did you forget to enable `atomics` and `bulk-memory` features as outlined in wasm-bindgen-rayon README?");
+
+#[cfg(not(any(target_feature = "atomics", doc)))]
+compile_error!("Make sure to build std with `RUSTFLAGS='-C target-feature=+atomics,+bulk-memory,+mutable-globals'`");

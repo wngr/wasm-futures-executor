@@ -3,6 +3,14 @@ name = "wasm-futures-executor"
 version = "0.1.0"
 edition = "2018"
 authors = ["Oliver Wangler <oliver@wngr.de>"]
+description = "Executor for asynchronous task based on wasm web workers"
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/wngr/wasm-futures-executor"
+homepage = "https://github.com/wngr/wasm-futures-executor"
+documentation = "https://docs.rs/wasm-futures-executor"
+keywords = ["thread", "wasm", "parallel", "concurrency", "async"]
+categories = ["concurrency", "wasm"]
+readme = "README.md"
 
 [dependencies]
 futures = "0.3.16"
@@ -24,3 +32,6 @@ features = ["Blob", "BlobPropertyBag", "DedicatedWorkerGlobalScope","Navigator",
 js-sys = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
 wasm-bindgen = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
 web-sys = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
+
+[package.metadata.docs.rs]
+features = ["nightly"]

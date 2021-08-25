@@ -9,15 +9,9 @@
       async function run() {
         await init();
 
-        //const pool = new WorkerPool(navigator.hardwareConcurrency);
-        //console.log("created pool");
-
-        //while (true) {
-          const res = await start();
-          console.log("result", res);
-       // }
+        const res = await start();
+        console.log("result", res);
       }
-
       run();
     </script>
   </body>

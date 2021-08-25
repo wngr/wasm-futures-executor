@@ -1,3 +1,5 @@
+// Verbatim copy from
+// https://docs.rs/futures-executor/0.3.16/src/futures_executor/unpark_mutex.rs.html
 use std::cell::UnsafeCell;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::SeqCst;
