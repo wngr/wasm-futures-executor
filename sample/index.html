@@ -4,7 +4,7 @@
   </head>
   <body>
     <script type="module">
-      import init, { start_async, WorkerPool } from './wasm_futures_executor.js';
+      import init, { start } from './sample.js';
 
       async function run() {
         await init();
@@ -13,7 +13,7 @@
         //console.log("created pool");
 
         //while (true) {
-          const res = await start_async();
+          const res = await start();
           console.log("result", res);
        // }
       }

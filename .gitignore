@@ -1,5 +1,6 @@
-/target
+target
 *.d.ts
 *.wasm
 *.js
-/pkg
+pkg
+snippets
