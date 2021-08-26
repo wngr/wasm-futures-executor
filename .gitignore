@@ -1,6 +1,8 @@
 target
+dist
 *.d.ts
 *.wasm
 *.js
 pkg
 snippets
+node_modules
