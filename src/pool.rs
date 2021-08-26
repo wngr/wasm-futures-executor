@@ -154,10 +154,12 @@ impl ThreadPool {
 
     /// Creates a new [`ThreadPool`] with `Navigator.hardwareConcurrency` web workers.
     pub fn max_threads() -> Result<Self, JsValue> {
-        let pool_size = web_sys::window()
-            .ok_or("Global window object not accessible")?
-            .navigator()
-            .hardware_concurrency() as usize;
+        #[wasm_bindgen]
+        extern "C" {
+            #[wasm_bindgen(js_namespace = navigator, js_name = hardwareConcurrency)]
+            static HARDWARE_CONCURRENCY: usize;
+        }
+        let pool_size = std::cmp::min(*HARDWARE_CONCURRENCY, 1);
         Self::new(pool_size)
     }
     /// Spawns a future that will be run to completion.
