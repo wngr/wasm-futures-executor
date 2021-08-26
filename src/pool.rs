@@ -1,13 +1,12 @@
 use futures::{Future, FutureExt};
 use futures_task::{waker_ref, ArcWake, Context, FutureObj, Poll, Spawn, SpawnError};
+use js_sys::JsString;
 use log::*;
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc};
 use wasm_bindgen::{prelude::*, JsCast};
-use web_sys::{
-    Blob, BlobPropertyBag, DedicatedWorkerGlobalScope, Url, Worker, WorkerOptions, WorkerType,
-};
+use web_sys::{DedicatedWorkerGlobalScope, Worker, WorkerOptions, WorkerType};
 
 use crate::unpark_mutex::UnparkMutex;
 
@@ -56,65 +55,32 @@ impl Spawn for ThreadPool {
     }
 }
 
-/// Generates a DOMString containing an URL representing the code each worker is bootstrapped from.
-/// This string can be used to as an argument to the [`Worker`] constructor.
-fn worker_script() -> String {
-    let path = js_sys::eval(r#"
-// Taken from https://github.com/chemicstry/wasm_thread/blob/3c712fe91c8bc31cbdc8eeba7d151c4505d358e2/src/script_path.js
-//
-// Extracts current script file path from artificially generated stack trace
-function script_path() {
-    try {
-        throw new Error();
-    } catch (e) {
-        let parts = e.stack.match(/\((\S+):\d+:\d+\)/);
-        return parts[1];
+#[wasm_bindgen]
+pub struct LoaderHelper {}
+#[wasm_bindgen]
+impl LoaderHelper {
+    #[wasm_bindgen(js_name = mainJS)]
+    pub fn main_js(&self) -> JsString {
+        #[wasm_bindgen]
+        extern "C" {
+            #[wasm_bindgen(js_namespace = ["import", "meta"], js_name = url)]
+            static URL: JsString;
+        }
+
+        URL.clone()
     }
 }
 
-script_path()"#).unwrap().as_string().unwrap();
-    let code = format!(
-        r#"
-// The first message initializes the wasm module with the passed
-// shared memory.
-self.onmessage = event => {{
-    let [module, memory] = event.data;
-
-    // Can't use relative imports here, as this would resolve to `blob:.../<crate_name>.js` [1] and
-    // obviously that fails. So we have to construct the absolute file url ourselves. Furthermore, we
-    // also need to figure out the name of the base js file, which usually is the crate name.
-    //
-    // [1] https://bugs.chromium.org/p/chromium/issues/detail?id=1161710
-    let initialised = import('{}').then(async ({{ default: init, worker_entry_point }}) => {{
-      await init(module, memory).catch(err => {{
-        setTimeout(() => {{
-          throw err;
-        }});
-        throw err;
-      }});
-      return worker_entry_point;
-    }});
-
-  // The second message passes shared state to the workers. There
-  // shouldn't be any additional messages after that.
-  self.onmessage = async event => {{
-    let worker_entry_point = await initialised;
-    worker_entry_point(event.data);
-
-    // Terminate web worker
-    close();
-  }};
-}};"#,
-        path
-    );
-    let array = js_sys::Array::new();
-    array.push(&code.into());
-
-    let mut opts = BlobPropertyBag::new();
-    opts.type_("text/javascript; charset=utf8");
-
-    let blob = Blob::new_with_str_sequence_and_options(&array, &opts).unwrap();
-    Url::create_object_url_with_blob(&blob).unwrap()
+#[wasm_bindgen(module = "/worker.js")]
+extern "C" {
+    #[wasm_bindgen(js_name = "startWorker")]
+    fn start_worker(
+        module: JsValue,
+        memory: JsValue,
+        shared_data: JsValue,
+        opts: WorkerOptions,
+        builder: LoaderHelper,
+    ) -> Worker;
 }
 
 impl ThreadPool {
@@ -129,7 +95,6 @@ impl ThreadPool {
                 size,
             }),
         };
-        let worker_script = worker_script();
 
         for idx in 0..size {
             let state = pool.state.clone();
@@ -137,17 +102,19 @@ impl ThreadPool {
             let mut opts = WorkerOptions::new();
             opts.type_(WorkerType::Module);
             opts.name(&*format!("Worker-{}", idx));
-            let worker = Worker::new_with_options(&*worker_script, &opts)?;
 
             // With a worker spun up send it the module/memory so it can start
             // instantiating the wasm module. Later it might receive further
             // messages about code to run on the wasm module.
-            let array = js_sys::Array::new();
-            array.push(&wasm_bindgen::module());
-            array.push(&wasm_bindgen::memory());
-            worker.post_message(&array)?;
             let ptr = Arc::into_raw(state);
-            worker.post_message(&JsValue::from(ptr as u32))?;
+            let _worker = start_worker(
+                wasm_bindgen::module(),
+                wasm_bindgen::memory(),
+                JsValue::from(ptr as u32),
+                opts,
+                LoaderHelper {},
+            );
+            // TODO: Check that workers actually spawned.
         }
         Ok(pool)
     }
@@ -159,7 +126,7 @@ impl ThreadPool {
             #[wasm_bindgen(js_namespace = navigator, js_name = hardwareConcurrency)]
             static HARDWARE_CONCURRENCY: usize;
         }
-        let pool_size = std::cmp::min(*HARDWARE_CONCURRENCY, 1);
+        let pool_size = std::cmp::max(*HARDWARE_CONCURRENCY, 1);
         Self::new(pool_size)
     }
     /// Spawns a future that will be run to completion.
@@ -291,7 +258,7 @@ struct WakeHandle {
 }
 
 /// Entry point invoked by the web worker. The passed pointer will be unconditionally interpreted
-/// as an `Arc<PoolState`.
+/// as an `Arc<PoolState>`.
 #[wasm_bindgen]
 pub fn worker_entry_point(state_ptr: u32) {
     let state = unsafe { Arc::<PoolState>::from_raw(state_ptr as *const PoolState) };

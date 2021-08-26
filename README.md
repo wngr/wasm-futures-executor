@@ -69,9 +69,10 @@ providing creating the `rust-toolchain.toml` and `.cargo/config` files
 like done in this repo).
 
 Please have a look at the [sample](./sample) for a complete end-to-end
-example project.
+example project without bundlers, and
+[sample-webpack](./sample-webpack) using Webpack 5.
 
-Note: This crate assumes usage of the `web` target of
+Note: This crate requires usage of the `web` target of
 `wasm-bindgen`/`wasm-pack`. Given the broad standardization on ES
 Modules, this should be mostly fine.
 
@@ -81,15 +82,13 @@ Similar to the async executor provided by
 [`futures-executor`](https://crates.io/crates/futures-executor),
 multiple worker "threads" are spawned upon instantation of the
 `ThreadPool`. Each thread is a web worker, which loads some js glue
-code. The glue code is inlined and passed as an object url to the
-Worker's constructor. In order to load the main js file, a small hack
-is used to figure out the origin and the script's filename
-(inspiration taken from the
-[wasm_thread](https://github.com/chemicstry/wasm_thread) crate).
-Each web worker expects exactly two messages:
-1. The first to initialize the WebAssembly module and its shared memory
+code. The glue code is provided as a js snippet, which is linked from
+the wasm-bindgen generated js glue code. This way, it's transparent to
+any bundlers.
+Each web worker is constructed with the following arguments:
+1. WebAssembly module initialization and its shared memory
 ([`SharedArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer)).
-2. The second one is a pointer to some shared state, including a channel,
+2. The third one is a pointer to some shared state, including a channel,
 where the async tasks are passed in. The library provides the 
 `worker_entry_point` function for this purpose.
 
