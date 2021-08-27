@@ -9,7 +9,6 @@
 ///! [`futures_executor::ThreadPool`]: https://docs.rs/futures-executor/0.3.16/futures_executor/struct.ThreadPool.html
 ///! [repository]: https://github.com/wngr/wasm-futures-executor
 mod pool;
-mod unpark_mutex;
 
 pub use self::pool::ThreadPool;
 

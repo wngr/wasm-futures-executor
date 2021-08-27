@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 console_error_panic_hook = "0.1.6"
 console_log = "0.2.0"
 futures = "0.3.16"
-instant = { version = "0.1.10", features = ["stdweb"] }
+futures-timer = { version = "3.0.2", features = ["wasm-bindgen"] }
 js-sys = "0.3.53"
 log = "0.4.14"
 wasm-bindgen = "0.2.76"

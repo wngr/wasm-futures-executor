@@ -34,14 +34,17 @@ if ('WorkerGlobalScope' in self &&
             } = await importFrom;
             await init(module, memory);
 
-            // There shouldn't be any additional messages after the first.
             worker_entry_point(state);
-            // Terminate web worker
-            close();
+            // There shouldn't be any additional messages after the first.
+            self.onmessage = event => {
+                console.error("Unexpected message", event);
+            }
         } catch (err) {
             // Propagate to main `onerror`:
             setTimeout(() => {
                 throw err;
+                //Terminate the worker
+                close();
             });
             throw err;
         }

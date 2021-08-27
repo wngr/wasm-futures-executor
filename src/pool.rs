@@ -1,14 +1,13 @@
-use futures::{Future, FutureExt};
-use futures_task::{waker_ref, ArcWake, Context, FutureObj, Poll, Spawn, SpawnError};
+use futures::channel::oneshot;
+use futures::future::BoxFuture;
+use futures::StreamExt;
+use futures::{channel::mpsc, Future};
 use js_sys::JsString;
 use log::*;
-use parking_lot::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{mpsc, Arc};
+use std::sync::Arc;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{DedicatedWorkerGlobalScope, Worker, WorkerOptions, WorkerType};
-
-use crate::unpark_mutex::UnparkMutex;
 
 trait AssertSendSync: Send + Sync {}
 impl AssertSendSync for ThreadPool {}
@@ -48,13 +47,6 @@ impl Drop for ThreadPool {
     }
 }
 
-impl Spawn for ThreadPool {
-    fn spawn_obj(&self, future: FutureObj<'static, ()>) -> Result<(), SpawnError> {
-        self.spawn_obj_ok(future);
-        Ok(())
-    }
-}
-
 #[wasm_bindgen]
 pub struct LoaderHelper {}
 #[wasm_bindgen]
@@ -86,11 +78,11 @@ extern "C" {
 impl ThreadPool {
     /// Creates a new [`ThreadPool`] with the provided count of web workers.
     pub fn new(size: usize) -> Result<ThreadPool, JsValue> {
-        let (tx, rx) = mpsc::channel();
+        let (tx, rx) = mpsc::channel(64);
         let pool = ThreadPool {
             state: Arc::new(PoolState {
-                tx: Mutex::new(tx),
-                rx: Mutex::new(rx),
+                tx: parking_lot::Mutex::new(tx),
+                rx: async_lock::Mutex::new(rx),
                 cnt: AtomicUsize::new(1),
                 size,
             }),
@@ -129,132 +121,79 @@ impl ThreadPool {
         let pool_size = std::cmp::max(*HARDWARE_CONCURRENCY, 1);
         Self::new(pool_size)
     }
-    /// Spawns a future that will be run to completion.
-    ///
-    /// > **Note**: This method is similar to `Spawn::spawn_obj`, except that
-    /// >           it is guaranteed to always succeed.
-    pub fn spawn_obj_ok(&self, future: FutureObj<'static, ()>) {
-        let task = Task {
-            future,
-            wake_handle: Arc::new(WakeHandle {
-                exec: self.clone(),
-                mutex: UnparkMutex::new(),
-            }),
-            exec: self.clone(),
-        };
-        self.state.send(Message::Run(task));
-    }
 
     /// Spawns a task that polls the given future with output `()` to
     /// completion.
     ///
     /// ```
-    /// use futures::executor::ThreadPool;
+    /// use wasm_futures_executor::ThreadPool;
     ///
     /// let pool = ThreadPool::new().unwrap();
     ///
     /// let future = async { /* ... */ };
     /// pool.spawn_ok(future);
     /// ```
-    ///
-    /// > **Note**: This method is similar to `SpawnExt::spawn`, except that
-    /// >           it is guaranteed to always succeed.
     pub fn spawn_ok<Fut>(&self, future: Fut)
     where
         Fut: Future<Output = ()> + Send + 'static,
     {
-        self.spawn_obj_ok(FutureObj::new(Box::new(future)))
+        self.state.send(Message::Run(Box::pin(future)));
+    }
+
+    /// Spawns a task. This function returns a future which eventually resolves to the output of
+    /// the computation.
+    /// Note: The provided future is polled on the thread pool, no matter whether the returned
+    /// future is polled or not.
+    pub fn spawn<Fut>(
+        &self,
+        future: Fut,
+    ) -> impl Future<Output = Result<Fut::Output, oneshot::Canceled>> + 'static
+    where
+        Fut: Future + Send + 'static,
+        Fut::Output: Send + 'static,
+    {
+        let (tx, rx) = oneshot::channel();
+        let f = async move {
+            let res = future.await;
+            let _ = tx.send(res);
+        };
+
+        self.spawn_ok(f);
+        rx
     }
 }
 
 enum Message {
-    Run(Task),
+    Run(BoxFuture<'static, ()>),
     Close,
 }
 
 pub struct PoolState {
-    tx: Mutex<mpsc::Sender<Message>>,
-    rx: Mutex<mpsc::Receiver<Message>>,
+    tx: parking_lot::Mutex<mpsc::Sender<Message>>,
+    rx: async_lock::Mutex<mpsc::Receiver<Message>>,
     cnt: AtomicUsize,
     size: usize,
 }
 
 impl PoolState {
     fn send(&self, msg: Message) {
-        self.tx.lock().send(msg).unwrap();
+        self.tx.lock().start_send(msg).unwrap()
     }
 
-    fn work(&self) {
-        loop {
-            let msg = self.rx.lock().recv().unwrap();
-            match msg {
-                Message::Run(task) => task.run(),
-                Message::Close => break,
-            }
-        }
-    }
-}
-
-/// A task responsible for polling a future to completion.
-struct Task {
-    future: FutureObj<'static, ()>,
-    exec: ThreadPool,
-    wake_handle: Arc<WakeHandle>,
-}
-
-impl Task {
-    /// Actually run the task (invoking `poll` on the future) on the current
-    /// thread.
-    fn run(self) {
-        let Self {
-            mut future,
-            wake_handle,
-            mut exec,
-        } = self;
-        let waker = waker_ref(&wake_handle);
-        let mut cx = Context::from_waker(&waker);
-
-        // Safety: The ownership of this `Task` object is evidence that
-        // we are in the `POLLING`/`REPOLL` state for the mutex.
-        unsafe {
-            wake_handle.mutex.start_poll();
-
-            loop {
-                let res = future.poll_unpin(&mut cx);
-                match res {
-                    Poll::Pending => {}
-                    Poll::Ready(()) => return wake_handle.mutex.complete(),
-                }
-                let task = Self {
-                    future,
-                    wake_handle: wake_handle.clone(),
-                    exec,
-                };
-                match wake_handle.mutex.wait(task) {
-                    Ok(()) => return, // we've waited
-                    Err(task) => {
-                        // someone's notified us
-                        future = task.future;
-                        exec = task.exec;
-                    }
+    fn work(slf: Arc<PoolState>) {
+        let driver = async move {
+            let global = js_sys::global().unchecked_into::<DedicatedWorkerGlobalScope>();
+            while let Some(msg) = slf.rx.lock().await.next().await {
+                match msg {
+                    Message::Run(future) => wasm_bindgen_futures::spawn_local(future),
+                    Message::Close => break,
                 }
             }
-        }
+            info!("{}: Shutting down", global.name());
+            global.close();
+        };
+        wasm_bindgen_futures::spawn_local(driver);
     }
-}
-
-impl ArcWake for WakeHandle {
-    fn wake_by_ref(arc_self: &Arc<Self>) {
-        match arc_self.mutex.notify() {
-            Ok(task) => arc_self.exec.state.send(Message::Run(task)),
-            Err(()) => {}
-        }
-    }
-}
-
-struct WakeHandle {
-    mutex: UnparkMutex<Task>,
-    exec: ThreadPool,
 }
 
 /// Entry point invoked by the web worker. The passed pointer will be unconditionally interpreted
@@ -263,8 +202,9 @@ struct WakeHandle {
 pub fn worker_entry_point(state_ptr: u32) {
     let state = unsafe { Arc::<PoolState>::from_raw(state_ptr as *const PoolState) };
 
-    let global = js_sys::global().unchecked_into::<DedicatedWorkerGlobalScope>();
-    debug!("{} spawned", global.name());
-    state.work();
-    debug!("{} yield", global.name());
+    let name = js_sys::global()
+        .unchecked_into::<DedicatedWorkerGlobalScope>()
+        .name();
+    debug!("{}: Entry", name);
+    PoolState::work(state);
 }
