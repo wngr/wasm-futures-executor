@@ -31,6 +31,8 @@ pub fn start() -> Promise {
         });
     }
     wasm_bindgen_futures::future_to_promise(async move {
+        // Hang onto thread pool handle
+        let _tp = tp;
         let mut i = 0;
         while let Some(x) = rx.next().await {
             i += x;
