@@ -84,7 +84,7 @@ impl ThreadPool {
         let pool = ThreadPool {
             state: Arc::new(PoolState {
                 tx: parking_lot::Mutex::new(tx),
-                rx: async_lock::Mutex::new(rx),
+                rx: tokio::sync::Mutex::new(rx),
                 cnt: AtomicUsize::new(1),
                 size,
             }),
@@ -173,7 +173,7 @@ enum Message {
 
 pub struct PoolState {
     tx: parking_lot::Mutex<mpsc::Sender<Message>>,
-    rx: async_lock::Mutex<mpsc::Receiver<Message>>,
+    rx: tokio::sync::Mutex<mpsc::Receiver<Message>>,
     cnt: AtomicUsize,
     size: usize,
 }
