@@ -7,7 +7,12 @@ export function startWorker(module, memory, state, opts, helper) {
         import.meta.url), opts);
     worker.postMessage([module, memory, state, helper.mainJS()]);
 
-    return worker;
+    return new Promise((res, rej) => {
+      worker.onmessage = ev => {
+        if (ev.data === 'started') res();
+      };
+      worker.onerror = rej;
+    });
 }
 
 // Second: Entry script for the actual web worker.
@@ -35,6 +40,7 @@ if ('WorkerGlobalScope' in self &&
             await init(module, memory);
 
             worker_entry_point(state);
+            postMessage('started');
             // There shouldn't be any additional messages after the first.
             self.onmessage = event => {
                 console.error("Unexpected message", event);

@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use futures::channel::mpsc;
 use futures::StreamExt;
-use js_sys::Promise;
 use log::*;
 use wasm_bindgen::{prelude::*, JsCast};
 use wasm_futures_executor::ThreadPool;
@@ -15,8 +14,8 @@ pub fn main() {
 }
 
 #[wasm_bindgen]
-pub fn start() -> Promise {
-    let pool = ThreadPool::new(2).unwrap();
+pub async fn start() -> Result<JsValue, JsValue> {
+    let pool = ThreadPool::new(2).await?;
     let (tx, mut rx) = mpsc::channel(10);
     for i in 0..5 {
         let mut tx_c = tx.clone();
@@ -61,13 +60,10 @@ pub fn start() -> Promise {
             tx_c.start_send(i * x).unwrap();
         });
     }
-    wasm_bindgen_futures::future_to_promise(async move {
-        // Don't drop the pool until we're finished
-        let _x = pool;
-        let mut i = 0;
-        while let Some(x) = rx.next().await {
-            i += x;
-        }
-        Ok(i.into())
-    })
+    drop(tx);
+    let mut i = 0;
+    while let Some(x) = rx.next().await {
+        i += x;
+    }
+    Ok(i.into())
 }

@@ -21,8 +21,8 @@ use wasm_bindgen::prelude::*;
 use wasm_futures_executor::ThreadPool;
 
 #[wasm_bindgen]
-pub fn start() -> Promise {
-    let pool = ThreadPool::max_threads().unwrap();
+pub async fn start() -> Result<JsValue, JsValue> {
+    let pool = ThreadPool::max_threads().await?;
     let (tx, mut rx) = mpsc::channel(10);
     for i in 0..20 {
         let mut tx_c = tx.clone();
@@ -30,15 +30,12 @@ pub fn start() -> Promise {
             tx_c.start_send(i * i).unwrap();
         });
     }
-    wasm_bindgen_futures::future_to_promise(async move {
-        // Hang onto thread pool handle
-        let _tp = tp;
-        let mut i = 0;
-        while let Some(x) = rx.next().await {
-            i += x;
-        }
-        Ok(i.into())
-    })
+    drop(tx);
+    let mut i = 0;
+    while let Some(x) = rx.next().await {
+        i += x;
+    }
+    Ok(i.into())
 }
 ```
 .. and using it:

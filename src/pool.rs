@@ -2,12 +2,12 @@ use futures::channel::oneshot;
 use futures::future::BoxFuture;
 use futures::StreamExt;
 use futures::{channel::mpsc, Future};
-use js_sys::JsString;
+use js_sys::{JsString, Promise};
 use log::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use wasm_bindgen::{prelude::*, JsCast};
-use web_sys::{DedicatedWorkerGlobalScope, Worker, WorkerOptions, WorkerType};
+use web_sys::{DedicatedWorkerGlobalScope, WorkerOptions, WorkerType};
 
 trait AssertSendSync: Send + Sync {}
 impl AssertSendSync for ThreadPool {}
@@ -66,18 +66,20 @@ impl LoaderHelper {
 #[wasm_bindgen(module = "/worker.js")]
 extern "C" {
     #[wasm_bindgen(js_name = "startWorker")]
+    /// Returns Promise<Worker>
     fn start_worker(
         module: JsValue,
         memory: JsValue,
         shared_data: JsValue,
         opts: WorkerOptions,
         builder: LoaderHelper,
-    ) -> Worker;
+    ) -> Promise;
 }
 
 impl ThreadPool {
-    /// Creates a new [`ThreadPool`] with the provided count of web workers.
-    pub fn new(size: usize) -> Result<ThreadPool, JsValue> {
+    /// Creates a new [`ThreadPool`] with the provided count of web workers. The returned future
+    /// will resolve after all workers have spawned and are ready to accept work.
+    pub async fn new(size: usize) -> Result<ThreadPool, JsValue> {
         let (tx, rx) = mpsc::channel(64);
         let pool = ThreadPool {
             state: Arc::new(PoolState {
@@ -99,27 +101,28 @@ impl ThreadPool {
             // instantiating the wasm module. Later it might receive further
             // messages about code to run on the wasm module.
             let ptr = Arc::into_raw(state);
-            let _worker = start_worker(
+            let _worker = wasm_bindgen_futures::JsFuture::from(start_worker(
                 wasm_bindgen::module(),
                 wasm_bindgen::memory(),
                 JsValue::from(ptr as u32),
                 opts,
                 LoaderHelper {},
-            );
+            ))
+            .await?;
             // TODO: Check that workers actually spawned.
         }
         Ok(pool)
     }
 
     /// Creates a new [`ThreadPool`] with `Navigator.hardwareConcurrency` web workers.
-    pub fn max_threads() -> Result<Self, JsValue> {
+    pub async fn max_threads() -> Result<Self, JsValue> {
         #[wasm_bindgen]
         extern "C" {
             #[wasm_bindgen(js_namespace = navigator, js_name = hardwareConcurrency)]
             static HARDWARE_CONCURRENCY: usize;
         }
         let pool_size = std::cmp::max(*HARDWARE_CONCURRENCY, 1);
-        Self::new(pool_size)
+        Self::new(pool_size).await
     }
 
     /// Spawns a task that polls the given future with output `()` to
@@ -128,7 +131,7 @@ impl ThreadPool {
     /// ```
     /// use wasm_futures_executor::ThreadPool;
     ///
-    /// let pool = ThreadPool::new().unwrap();
+    /// let pool = ThreadPool::new().await.unwrap();
     ///
     /// let future = async { /* ... */ };
     /// pool.spawn_ok(future);
