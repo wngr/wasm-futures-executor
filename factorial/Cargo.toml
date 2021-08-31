@@ -1,0 +1,30 @@
+[package]
+name = "sample"
+version = "0.1.0"
+edition = "2018"
+authors = ["Oliver Wangler <oliver@wngr.de>"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+console_error_panic_hook = "0.1.6"
+console_log = "0.2.0"
+futures = "0.3.16"
+futures-timer = { version = "3.0.2", features = ["wasm-bindgen"] }
+js-sys = "0.3.53"
+log = "0.4.14"
+num = "0.4.0"
+wasm-bindgen = "0.2.76"
+wasm-bindgen-futures = "0.4.26"
+wasm-futures-executor = { path = ".." }
+
+[dependencies.web-sys]
+version = "0.3.53"
+features = ["DedicatedWorkerGlobalScope"]
+
+[patch.crates-io]
+js-sys = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
+wasm-bindgen = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
+wasm-bindgen-futures = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
+web-sys = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }

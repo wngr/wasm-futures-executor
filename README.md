@@ -137,6 +137,13 @@ If you're targeting older browser, you might want to do some feature
 detection and fall back gracefully -- but that's out of scope for this
 documentation.
 
+## Is it worth it?
+
+There is a significant overhead of sending and spawning futures across the
+thread boundary. It makes most sense for long-lived tasks (check out the
+[factorial](./factorial) demo, which is a rough 3x performance increase).
+As always, make sure to profile your use case.
+
 ## Related crates and further information
 
 * The first and foremost resource is the great raytracing demo of the

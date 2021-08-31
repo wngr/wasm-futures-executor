@@ -1,0 +1,28 @@
+<html>
+  <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
+  </head>
+  <body>
+    <script type="module">
+      import init, { start_tp, factorial_single, factorial_multi } from './sample.js';
+
+      async function run() {
+        await init();
+
+        const N = 200_000;
+        const now = new Date();
+        const single = factorial_single(N);
+
+        const tp = await start_tp();
+        const now2 = new Date();
+        const multi = await factorial_multi(tp, N);
+        if (single !== multi) {
+          throw new Error("Results don't match");
+        }
+        console.log("Factorial single took", new Date() - now);
+        console.log("Factorial multi took", new Date() - now2);
+      }
+      run();
+    </script>
+  </body>
+<html>
