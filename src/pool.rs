@@ -24,6 +24,7 @@ impl AssertSendSync for ThreadPool {}
 /// The API follows [`futures_executor::ThreadPool`].
 ///
 /// [`futures_executor::ThreadPool`]: https://docs.rs/futures-executor/0.3.16/futures_executor/struct.ThreadPool.html
+#[wasm_bindgen]
 pub struct ThreadPool {
     state: Arc<PoolState>,
 }
@@ -201,7 +202,7 @@ impl PoolState {
 
 /// Entry point invoked by the web worker. The passed pointer will be unconditionally interpreted
 /// as an `Arc<PoolState>`.
-#[wasm_bindgen]
+#[wasm_bindgen(skip_typescript)]
 pub fn worker_entry_point(state_ptr: u32) {
     let state = unsafe { Arc::<PoolState>::from_raw(state_ptr as *const PoolState) };
 
