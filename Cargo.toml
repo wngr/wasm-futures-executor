@@ -30,10 +30,5 @@ features = ["wasm-bindgen", "nightly"]
 version = "0.3.53"
 features = ["DedicatedWorkerGlobalScope","Navigator", "WorkerOptions", "WorkerType", "ErrorEvent", "Url"]
 
-[patch.crates-io]
-js-sys = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
-wasm-bindgen = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
-web-sys = { git = "https://github.com/rustwasm/wasm-bindgen", rev = "6ab9ac0f0f6853e1ceed8006a0ffe3a4c0c8323f" }
-
 [package.metadata.docs.rs]
 features = ["nightly"]

@@ -15,7 +15,7 @@ pub fn main() {
 
 #[wasm_bindgen]
 pub async fn start() -> Result<JsValue, JsValue> {
-    let pool = ThreadPool::new(2).await?;
+    let pool = ThreadPool::new(8).await?;
     let (tx, mut rx) = mpsc::channel(10);
     for i in 0..5 {
         let mut tx_c = tx.clone();
