@@ -19,7 +19,17 @@ jobs:
       run: cargo clippy --workspace --examples --tests --all-features -- -D warnings
     
     - name: cargo build
-      run: cargo build
+      run: cargo build --locked
 
     - name: build sample
       run: cd sample && cargo install wasm-bindgen-cli && ./build.sh
+
+    - name: build sample-webpack
+      run: cd sample-webpack && nvm use && npm run build
+
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+
+    - name: build factorial 
+      run: cd factorial && cargo install wasm-bindgen-cli && ./build.sh
