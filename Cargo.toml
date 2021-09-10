@@ -1,6 +1,6 @@
 [package]
 name = "wasm-futures-executor"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2018"
 authors = ["Oliver Wangler <oliver@wngr.de>"]
 description = "Executor for asynchronous task based on wasm web workers"
@@ -31,6 +31,6 @@ version = "0.3.54"
 features = ["DedicatedWorkerGlobalScope","Navigator", "WorkerOptions", "WorkerType", "ErrorEvent", "Url"]
 
 [package.metadata.docs.rs]
-rustc-args = ["-C", "target-feature=+atomics,+bulk-memory,+mutable-globals"]
-cargo-args = ["-Z", "build-std=std,panic_abort"]
-default-target = "wasm32-unknown-unknown"
+rustc-args = []
+cargo-args = []
+default-target = "x86_64-unknown-linux-gnu"
