@@ -1,7 +1,7 @@
 use futures::channel::oneshot;
-use futures::future::BoxFuture;
-use futures::StreamExt;
+use futures::future::LocalBoxFuture;
 use futures::{channel::mpsc, Future};
+use futures::{FutureExt, StreamExt};
 use js_sys::{JsString, Promise};
 use log::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -11,6 +11,8 @@ use web_sys::{DedicatedWorkerGlobalScope, WorkerOptions, WorkerType};
 
 trait AssertSendSync: Send + Sync {}
 impl AssertSendSync for ThreadPool {}
+
+type JsTask = Box<dyn FnOnce() -> LocalBoxFuture<'static, ()> + Send + 'static>;
 
 /// A general-purpose thread pool for scheduling tasks that poll futures to
 /// completion.
@@ -126,6 +128,14 @@ impl ThreadPool {
         Self::new(pool_size).await
     }
 
+    pub fn spawn_lazy<Gen>(&self, gen: Gen)
+    where
+        Gen: FnOnce() -> LocalBoxFuture<'static, ()> + Send + 'static,
+    {
+        let t: JsTask = Box::new(gen);
+        self.state.send(Message::Run(Box::new(t)));
+    }
+
     /// Spawns a task that polls the given future with output `()` to
     /// completion.
     ///
@@ -141,7 +151,8 @@ impl ThreadPool {
     where
         Fut: Future<Output = ()> + Send + 'static,
     {
-        self.state.send(Message::Run(Box::pin(future)));
+        let future = future.boxed();
+        self.spawn_lazy(|| future);
     }
 
     /// Spawns a task. This function returns a future which eventually resolves to the output of
@@ -168,7 +179,7 @@ impl ThreadPool {
 }
 
 enum Message {
-    Run(BoxFuture<'static, ()>),
+    Run(JsTask),
     Close,
 }
 
@@ -189,7 +200,7 @@ impl PoolState {
             let global = js_sys::global().unchecked_into::<DedicatedWorkerGlobalScope>();
             while let Some(msg) = slf.rx.lock().await.next().await {
                 match msg {
-                    Message::Run(future) => wasm_bindgen_futures::spawn_local(future),
+                    Message::Run(gen) => wasm_bindgen_futures::spawn_local(gen()),
                     Message::Close => break,
                 }
             }
