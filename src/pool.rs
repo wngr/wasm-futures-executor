@@ -1,3 +1,4 @@
+#![allow(clippy::unused_unit)]
 use futures::channel::oneshot;
 use futures::future::BoxFuture;
 use futures::StreamExt;
@@ -67,7 +68,7 @@ impl LoaderHelper {
 #[wasm_bindgen(module = "/worker.js")]
 extern "C" {
     #[wasm_bindgen(js_name = "startWorker")]
-    /// Returns Promise<Worker>
+    // Returns Promise<Worker>
     fn start_worker(
         module: JsValue,
         memory: JsValue,
