@@ -1,6 +1,6 @@
 [package]
 name = "wasm-futures-executor"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2018"
 authors = ["Oliver Wangler <oliver@wngr.de>"]
 description = "Executor for asynchronous task based on wasm web workers"
