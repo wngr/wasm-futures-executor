@@ -12,5 +12,5 @@ mod pool;
 
 pub use self::pool::ThreadPool;
 
-#[cfg(not(any(target_feature = "atomics", doc)))]
-compile_error!("Make sure to build std with `RUSTFLAGS='-C target-feature=+atomics,+bulk-memory,+mutable-globals'`");
+// #[cfg(not(any(target_feature = "atomics", doc)))]
+// compile_warning!("Make sure to build std with `RUSTFLAGS='-C target-feature=+atomics,+bulk-memory,+mutable-globals'`");
