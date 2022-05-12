@@ -82,7 +82,7 @@ impl ThreadPool {
     /// Creates a new [`ThreadPool`] with the provided count of web workers. The returned future
     /// will resolve after all workers have spawned and are ready to accept work.
     pub async fn new(size: usize) -> Result<ThreadPool, JsValue> {
-        let (tx, rx) = mpsc::channel(64);
+        let (tx, rx) = mpsc::unbounded();
         let pool = ThreadPool {
             state: Arc::new(PoolState {
                 tx: parking_lot::Mutex::new(tx),
@@ -174,8 +174,8 @@ enum Message {
 }
 
 pub struct PoolState {
-    tx: parking_lot::Mutex<mpsc::Sender<Message>>,
-    rx: tokio::sync::Mutex<mpsc::Receiver<Message>>,
+    tx: parking_lot::Mutex<mpsc::UnboundedSender<Message>>,
+    rx: tokio::sync::Mutex<mpsc::UnboundedReceiver<Message>>,
     cnt: AtomicUsize,
     size: usize,
 }
