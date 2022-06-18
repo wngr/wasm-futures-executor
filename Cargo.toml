@@ -22,9 +22,9 @@ wasm-bindgen = "0.2.77"
 wasm-bindgen-futures = "0.4.27"
 
 [dependencies.parking_lot]
-version = "0.11.2"
-# nightly: use a thread parker with atomics support
-features = ["wasm-bindgen", "nightly"]
+version = "0.12.1"
+# nightly: use a thread parker with atomics suppoDrt
+# features = ["wasm-bindgen", "nightly"]
 
 [dependencies.web-sys]
 version = "0.3.54"
