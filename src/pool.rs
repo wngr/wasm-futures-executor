@@ -51,17 +51,18 @@ impl Drop for ThreadPool {
 
 #[wasm_bindgen]
 pub struct LoaderHelper {}
+
 #[wasm_bindgen]
 impl LoaderHelper {
     #[wasm_bindgen(js_name = mainJS)]
     pub fn main_js(&self) -> JsString {
         #[wasm_bindgen]
         extern "C" {
-            #[wasm_bindgen(js_namespace = ["import", "meta"], js_name = url)]
+            #[wasm_bindgen(thread_local, js_namespace = ["import", "meta"], js_name = url)]
             static URL: JsString;
         }
 
-        URL.clone()
+        URL.with(JsString::clone)
     }
 }
 
@@ -120,10 +121,10 @@ impl ThreadPool {
     pub async fn max_threads() -> Result<Self, JsValue> {
         #[wasm_bindgen]
         extern "C" {
-            #[wasm_bindgen(js_namespace = navigator, js_name = hardwareConcurrency)]
+            #[wasm_bindgen(thread_local, js_namespace = navigator, js_name = hardwareConcurrency)]
             static HARDWARE_CONCURRENCY: usize;
         }
-        let pool_size = std::cmp::max(*HARDWARE_CONCURRENCY, 1);
+        let pool_size = std::cmp::max(HARDWARE_CONCURRENCY.with(|x| *x), 1);
         Self::new(pool_size).await
     }
 
